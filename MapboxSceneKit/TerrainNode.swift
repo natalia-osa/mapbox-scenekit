@@ -61,7 +61,11 @@ open class TerrainNode: SCNNode {
         metersPerLat = 1 / Math.metersToDegreesForLat(at: maxLon)
         metersPerLon = 1 / Math.metersToDegreesForLon(at: maxLat)
 
-        terrainZoomLevel = TerrainNode.zoomLevelForBounds(minLat: minLat, maxLat: maxLat, minLon: minLon, maxLon: maxLon, tileSize: TerrainNode.rgbTileSize)
+        let maxLocation = CLLocation(latitude: maxLat, longitude: maxLon)
+        let minLocation = CLLocation(latitude: minLat, longitude: minLon)
+        let distance = maxLocation.distance(from: minLocation) / 1000.0
+
+        terrainZoomLevel = TerrainNode.zoomLevelAtLatitude(lat: maxLat - minLat, distance: distance)
 
         let bounding = MapboxImageAPI.tiles(zoom: terrainZoomLevel, latBounds: latBounds, lonBounds: lonBounds, tileSize: TerrainNode.rgbTileSize)
         terrainSize = CGSize(width: CGFloat(bounding.xs.count) * TerrainNode.rgbTileSize.width - bounding.insets.left - bounding.insets.right,
@@ -82,26 +86,15 @@ open class TerrainNode: SCNNode {
         }
     }
 
-    private class func zoomLevelForBounds(minLat: CLLocationDegrees, maxLat: CLLocationDegrees, minLon: CLLocationDegrees, maxLon: CLLocationDegrees, tileSize: CGSize) -> Int {
-        var imageSizeIsTooBig = true
-        var zoomLevel = 22
+    private class func zoomLevelAtLatitude(lat: Double, distance: Double) -> Int
+    {
+        // fit the zoom level to the screen width
+        let screenWidth = Double(UIScreen.main.bounds.size.width)
+        let latitudinalAdjustment = cos(.pi * lat / 180)
+        let earthDiameterInKilometers = 40075.16
+        let arg = earthDiameterInKilometers * screenWidth * latitudinalAdjustment / (distance * 256)
 
-        let latBounds = (minLat, maxLat)
-        let lonBounds = (minLon, maxLon)
-
-        while imageSizeIsTooBig {
-            let bounding = MapboxImageAPI.tiles(zoom: zoomLevel, latBounds: latBounds, lonBounds: lonBounds, tileSize: tileSize)
-
-            let size = bounding.xs.count * Int(tileSize.width) * bounding.ys.count * Int(tileSize.height)
-            imageSizeIsTooBig = size > maxTextureImageSizeInBytes
-
-            // drop the zoom level and try again
-            if (imageSizeIsTooBig) {
-                zoomLevel -= 1
-            }
-        }
-
-        return zoomLevel
+        return Int(round(log(arg)/log(2)))
     }
 
     private func centerPivot() {
@@ -165,11 +158,12 @@ open class TerrainNode: SCNNode {
      For the simplist usage, you'll want to apply it as the diffuse contents in position 4 (the top): `myRerrainNode.geometry?.materials[4].diffuse.contents = image`.
     **/
     @objc
-    public func fetchTerrainTexture(_ style: String, zoom: Int, progress: MapboxImageAPI.TileLoadProgressCallback? = nil, completion: @escaping MapboxImageAPI.TileLoadCompletion) {
+    public func fetchTerrainTexture(_ style: String, progress: MapboxImageAPI.TileLoadProgressCallback? = nil, completion: @escaping MapboxImageAPI.TileLoadCompletion) {
         let latBounds = self.latBounds
         let lonBounds = self.lonBounds
+        let terrainZoomLevel = self.terrainZoomLevel
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            if let taskID = self?.api.image(forStyle: style, zoomLevel: zoom, minLat: latBounds.0, maxLat: latBounds.1, minLon: lonBounds.0, maxLon: lonBounds.1, progress: progress, completion: completion) {
+            if let taskID = self?.api.image(forStyle: style, zoomLevel: terrainZoomLevel, minLat: latBounds.0, maxLat: latBounds.1, minLon: lonBounds.0, maxLon: lonBounds.1, progress: progress, completion: completion) {
                 self?.pendingFetches.append(taskID)
             }
         }
