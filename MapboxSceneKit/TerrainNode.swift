@@ -133,14 +133,22 @@ open class TerrainNode: SCNNode {
      **/
     @objc
     public func fetchTerrainHeights(minWallHeight: CLLocationDistance = 0.0, enableDynamicShadows shadows: Bool = false, progress: MapboxImageAPI.TileLoadProgressCallback? = nil, completion: @escaping TerrainLoadCompletion) {
+        fetchTerrainHeights(minWallHeight: minWallHeight, enableDynamicShadows: shadows, zoomLevel: self.terrainZoomLevel, progress: progress, completion: completion)
+    }
+    
+    private func fetchTerrainHeights(minWallHeight: CLLocationDistance = 0.0, enableDynamicShadows shadows: Bool = false, zoomLevel: Int, retryNumber: Int = 3, progress: MapboxImageAPI.TileLoadProgressCallback? = nil, completion: @escaping TerrainLoadCompletion) {
         let latBounds = self.latBounds
         let lonBounds = self.lonBounds
-        let terrainZoomLevel = self.terrainZoomLevel
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            if let taskID = self?.api.image(forTileset: "mapbox.terrain-rgb", zoomLevel: terrainZoomLevel, minLat: latBounds.0, maxLat: latBounds.1, minLon: lonBounds.0, maxLon: lonBounds.1, format: MapboxImageAPI.TileImageFormatPNG, progress: progress, completion: { image, fetchError in
+            if let taskID = self?.api.image(forTileset: "mapbox.terrain-rgb", zoomLevel: zoomLevel, minLat: latBounds.0, maxLat: latBounds.1, minLon: lonBounds.0, maxLon: lonBounds.1, format: MapboxImageAPI.TileImageFormatPNG, progress: progress, completion: { image, fetchError in
                 TerrainNode.queue.async {
                     if let image = image {
                         self?.applyTerrainHeightmap(image, withWallHeight: minWallHeight, enableShadows: shadows)
+//                    } else if retryNumber > 0 && (fetchError?.code ?? 0) == FetchError.notFound.rawValue {
+//                        // there is a possibility there is no height map for given zoom level.
+//                        // more info here: https://github.com/mapbox/mapbox-scenekit/issues/41
+//                        self?.fetchTerrainHeights(minWallHeight: minWallHeight, multiplier: multiplier, enableDynamicShadows: shadows, zoomLevel: zoomLevel + 1, retryNumber: retryNumber - 1, progress: progress, completion: completion)
+//                        return
                     }
                     DispatchQueue.main.async() {
                         completion(fetchError)
