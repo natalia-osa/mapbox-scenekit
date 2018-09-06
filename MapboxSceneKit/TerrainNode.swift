@@ -144,12 +144,20 @@ open class TerrainNode: SCNNode {
             if let taskID = self?.api.image(forTileset: "mapbox.terrain-rgb", zoomLevel: zoomLevel, minLat: latBounds.0, maxLat: latBounds.1, minLon: lonBounds.0, maxLon: lonBounds.1, format: MapboxImageAPI.TileImageFormatPNG, progress: progress, completion: { image, fetchError in
                 TerrainNode.queue.async {
                     if let image = image {
-                        self?.applyTerrainHeightmap(image, withWallHeight: minWallHeight, multiplier: multiplier, enableShadows: shadows)
-                    } else if retryNumber > 0 && (fetchError?.code ?? 0) == FetchError.notFound.rawValue {
+                        var finalImage = image
+
+                        let zoomLevelDifferential = Double(self?.terrainZoomLevel ?? 0 - zoomLevel)
+                        let zoomFactor = CGFloat(pow(2.0,zoomLevelDifferential))
+
+                        if zoomFactor != 1 {
+                            // calculate a new image based on the differential between zoom levels
+                            finalImage = image.scaleImage(scaleFactor: zoomFactor)
+                        }
+                        self?.applyTerrainHeightmap(finalImage, withWallHeight: minWallHeight, multiplier: multiplier, enableShadows: shadows)
+                    } else if retryNumber > 0 {
                         // there is a possibility there is no height map for given zoom level.
                         // more info here: https://github.com/mapbox/mapbox-scenekit/issues/41
-                        self?.fetchTerrainHeights(minWallHeight: minWallHeight, multiplier: multiplier, enableDynamicShadows: shadows, zoomLevel: zoomLevel + 1, retryNumber: retryNumber - 1, progress: progress, completion: completion)
-                        return
+                        self?.fetchTerrainHeights(minWallHeight: minWallHeight, multiplier: multiplier, enableDynamicShadows: shadows, zoomLevel: zoomLevel - 1, retryNumber: retryNumber - 1, progress: progress, completion: completion)
                     }
                     DispatchQueue.main.async() {
                         completion(fetchError)
@@ -192,11 +200,11 @@ open class TerrainNode: SCNNode {
         var newTerrainHeights = [[Double]]()
         newTerrainHeights.reserveCapacity(Int(terrainSize.height))
 
-        for y in 0 ..< Int(terrainSize.height) {
+        for y in 0 ..< Int(image.size.height) {
             var rowData = [Double]()
-            rowData.reserveCapacity(Int(terrainSize.width))
-            for x in 0 ..< Int(terrainSize.width) {
-                guard let z = TerrainNode.heightFromImage(x: x, y: y, terrainData: terrainData, terrainSize: terrainSize, multiplier: multiplier) else {
+            rowData.reserveCapacity(Int(image.size.width))
+            for x in 0 ..< Int(image.size.width) {
+                guard let z = TerrainNode.heightFromImage(x: x, y: y, terrainData: terrainData, terrainSize: image.size, multiplier: multiplier) else {
                     NSLog("Couldn't get Z data for {\(x),\(y)}")
                     continue
                 }
