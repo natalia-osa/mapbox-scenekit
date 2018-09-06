@@ -82,8 +82,7 @@ final class DemoARViewController: UIViewController, ARSCNViewDelegate, ARSession
 
     private func insert(on plane: SCNNode, from hitResult: ARHitTestResult) {
         //Set up initial terrain and materials
-        let terrainNode = TerrainNode(minLat: 53.394747374316, maxLat: 53.422495172318,
-                                      minLon: -1.23018147712619, maxLon: -1.18246149810173)
+        let terrainNode = TerrainNode(minLat: 54.434409000000002, maxLat: 54.563648999999998, minLon: -3.1655532000000002, maxLon: -3.0641508000000002)
 
         //Note: Again, you don't have to do this loading in-scene. If you know the area of the node to be fetched, you can
         //do this in the background while AR plane detection is still working so it is ready by the time
