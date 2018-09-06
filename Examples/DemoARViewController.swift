@@ -97,19 +97,28 @@ final class DemoARViewController: UIViewController, ARSCNViewDelegate, ARSession
         arView!.scene.rootNode.addChildNode(terrainNode)
         terrain = terrainNode
 
-        terrainNode.fetchTerrainHeights(minWallHeight: 50.0, enableDynamicShadows: true, completion: { [weak self] in
-            NSLog("Terrain load complete")
-            guard let `self` = self, let firstLocation = self.locations.first, let lastLocation = self.locations.last else { return }
-            terrainNode.drawPath(from: self.locations, cylinderRadius: 10, color: .orange)
-            let firstNode = terrainNode.projectedSphere(at: firstLocation, radius: 15, color: .yellow)
-            terrainNode.addChildNode(firstNode)
-            let lastNode = terrainNode.projectedSphere(at: lastLocation, radius: 20, color: .red)
-            terrainNode.addChildNode(lastNode)
+        terrainNode.fetchTerrainHeights(minWallHeight: 50.0, enableDynamicShadows: true, completion: { [weak self] fetchError in
+            if let fetchError = fetchError {
+                NSLog("Texture load failed: \(fetchError.localizedDescription)")
+            } else {
+                NSLog("Terrain load complete")
+                guard let `self` = self, let firstLocation = self.locations.first, let lastLocation = self.locations.last else { return }
+                terrainNode.drawPath(from: self.locations, cylinderRadius: 10, color: .orange)
+                let firstNode = terrainNode.projectedSphere(at: firstLocation, radius: 15, color: .yellow)
+                terrainNode.addChildNode(firstNode)
+                let lastNode = terrainNode.projectedSphere(at: lastLocation, radius: 20, color: .red)
+                terrainNode.addChildNode(lastNode)
+            }
         })
 
-        terrainNode.fetchTerrainTexture("mapbox/satellite-v9", progress: { _, _ in }, completion: { image in
-            NSLog("Texture load complete")
-            terrainNode.geometry?.materials[4].diffuse.contents = image
+        terrainNode.fetchTerrainTexture("mapbox/satellite-v9", progress: { _, _ in }, completion: { image, fetchError in
+            if let fetchError = fetchError {
+                NSLog("Texture load failed: \(fetchError.localizedDescription)")
+            }
+            if image != nil {
+                NSLog("Texture load complete")
+                terrainNode.geometry?.materials[4].diffuse.contents = image
+            }
         })
 
         arView!.isUserInteractionEnabled = true
