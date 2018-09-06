@@ -140,14 +140,13 @@ open class TerrainNode: SCNNode {
     private func fetchTerrainHeights(minWallHeight: CLLocationDistance = 0.0, multiplier: Float, enableDynamicShadows shadows: Bool = false, zoomLevel: Int, retryNumber: Int = 3, progress: MapboxImageAPI.TileLoadProgressCallback? = nil, completion: @escaping TerrainLoadCompletion) {
         let latBounds = self.latBounds
         let lonBounds = self.lonBounds
-        let terrainZoomLevel = self.terrainZoomLevel
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             if let taskID = self?.api.image(forTileset: "mapbox.terrain-rgb", zoomLevel: zoomLevel, minLat: latBounds.0, maxLat: latBounds.1, minLon: lonBounds.0, maxLon: lonBounds.1, format: MapboxImageAPI.TileImageFormatPNG, progress: progress, completion: { image, fetchError in
                 TerrainNode.queue.async {
                     if let image = image {
                         var finalImage = image
 
-                        let zoomLevelDifferential = Double(terrainZoomLevel - zoomLevel)
+                        let zoomLevelDifferential = Double(self?.terrainZoomLevel ?? 0 - zoomLevel)
                         let zoomFactor = CGFloat(pow(2.0,zoomLevelDifferential))
 
                         if zoomFactor != 1 {
