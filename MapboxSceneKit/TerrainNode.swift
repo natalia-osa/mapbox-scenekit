@@ -144,11 +144,11 @@ open class TerrainNode: SCNNode {
                 TerrainNode.queue.async {
                     if let image = image {
                         self?.applyTerrainHeightmap(image, withWallHeight: minWallHeight, enableShadows: shadows)
-//                    } else if retryNumber > 0 && (fetchError?.code ?? 0) == FetchError.notFound.rawValue {
-//                        // there is a possibility there is no height map for given zoom level.
-//                        // more info here: https://github.com/mapbox/mapbox-scenekit/issues/41
-//                        self?.fetchTerrainHeights(minWallHeight: minWallHeight, multiplier: multiplier, enableDynamicShadows: shadows, zoomLevel: zoomLevel + 1, retryNumber: retryNumber - 1, progress: progress, completion: completion)
-//                        return
+                    } else if retryNumber > 0 && (fetchError?.code ?? 0) == FetchError.notFound.rawValue {
+                        // there is a possibility there is no height map for given zoom level.
+                        // more info here: https://github.com/mapbox/mapbox-scenekit/issues/41
+                        self?.fetchTerrainHeights(minWallHeight: minWallHeight, multiplier: multiplier, enableDynamicShadows: shadows, zoomLevel: zoomLevel + 1, retryNumber: retryNumber - 1, progress: progress, completion: completion)
+                        return
                     }
                     DispatchQueue.main.async() {
                         completion(fetchError)
